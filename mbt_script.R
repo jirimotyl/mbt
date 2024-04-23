@@ -1,11 +1,16 @@
 #Herman Buschke Memory Binding Test - Czech Validation
 ##
-##Authors: Ondrej Bezdicek, Jiri Motyl, Tomas Nikolai, Hana Horakova, Adela Fendrych Mazancova, Martin Vyhnalek, Jakub Hort, Robert Jech, Evzen Ruzicka, Herman Buschke
+##Authors: Ondrej Bezdicek, Jiri Motyl, Tomas Nikolai, Hana Horakova, Adela Fendrych Mazancova, Martin Vyhnalek, Jakub Hort, Robert Jech, Evzen Ruzicka
 ##Analysis by: Jiri Motyl, jiri.motyl@vfn.cz
 ##Corresponding Author: Ondrej Bezdicek, ondrej.bezdicek@vfn.cz
-##Date of analysis: 2023-01-13
-##R version 4.2.2 (2022-10-31 ucrt)
+##Date of analysis: 2024-04-23
 
+##R version R version 4.3.2 (2023-10-31 ucrt)
+###Platform: x86_64-w64-mingw32/x64 (64-bit)
+###Running under: Windows 10 x64 (build 19045)
+###attached base packages: stats; graphics; grDevices utils; datasets; methods; base
+###other attached packages: jmv_2.4.11; papaja_0.1.2; tinylabels_0.2.4; janitor_2.2.0; gt_0.10.1; pROC_1.18.5; WRS2_1.1-6; PMCMRplus_1.9.10;  rcompanion_2.4.35; lubridate_1.9.3;  forcats_1.0.0; stringr_1.5.1; dplyr_1.1.4; purrr_1.0.2; readr_2.1.5; tidyr_1.3.1; tibble_3.2.1; ggplot2_3.5.0; tidyverse_2.0.0;  psych_2.4.3    
+###locale: LC_COLLATE=Czech_Czechia.utf8; LC_CTYPE=Czech_Czechia.utf8; LC_MONETARY=Czech_Czechia.utf8 LC_NUMERIC=C; LC_TIME=Czech_Czechia.utf8    
 
 ###Description of key variables
 
@@ -16,7 +21,7 @@
 #####Disease_NO_amyloid (Main 4 groups coded cumerically: HC (01), PD-NC(02), PD-MCI(03), aMCI-AD Aβ unconfirmed (04), aMCI-AD Aβ confirmed(05))
 
 ####Demographic Variables:
-#####Edu = Education
+#####Edu = Education in years
 #####Age = Age
 #####Sex = Sex
 
@@ -37,30 +42,22 @@
 
 
 #necessary packages
-install.packages("psych")
-install.packages("tidyverse")
-install.packages("rcompanion")
-install.packages("PMCMRplus")
-install.packages("WRS2")
-install.packages("pROC")
-install.packages("gt")
-install.packages("janitor")
-install.packages("papaja")
-install.packages("jmv")
+##function to load packages
+install_and_load <- function(package_list) {
+  for (package in package_list) {
+    if (!require(package, character.only = TRUE)) {
+      install.packages(package)
+      library(package, character.only = TRUE)
+    }
+  }
+}
 
+## List of necessary packages
+packages <- c("psych", "tidyverse", "rcompanion", "PMCMRplus", "WRS2", "pROC", 
+              "gt", "janitor", "papaja", "jmv")
 
-
-#necessary libraries
-library(psych)
-library(tidyverse)
-library(rcompanion)
-library(PMCMRplus)
-library(WRS2)
-library(pROC)
-library(gt)
-library(janitor)
-library(papaja)
-library(jmv)
+## Install and load packages
+install_and_load(packages)
 
 
 
@@ -68,7 +65,6 @@ library(jmv)
 MBT <- read_csv("mbt_221030.csv", 
                   na = "N/A")
 spec(MBT)
-View(MBT)
 
 #variables
 ##variable types
@@ -80,7 +76,9 @@ MBT$Disease_NO <- factor(MBT$Disease_NO,
 MBT$Disease_NO_amyloid <- as.factor(MBT$Disease_NO_amyloid)
 MBT$Disease_NO_amyloid <- factor(MBT$Disease_NO_amyloid,
                          levels = c(1,2,3,4, 5),
-                         labels = c("HC", "PD-NC", "PD-MCI","AD-aMCI","AD-aMCI Aß conf."))
+                         labels = c("HC", "PD-NC", "PD-MCI","AD-aMCI","AD-aMCI Aβ conf."))
+##compute RAVLT 1-5 Total Learning Capacity
+MBT$RAVLT15 <- (MBT$RAVLT01 + MBT$RAVLT02 + MBT$RAVLT03 + MBT$RAVLT04 + MBT$RAVLT05)
 
 ##new variables for the analyses - group comparisons
 ##aMCI-AD and aMCI-AD beta-amyloid confirmed as a single group
@@ -142,8 +140,10 @@ MBT$PDMCI_vs_aMCIADamyloid <- as.factor(MBT$PDMCI_vs_aMCIADamyloid)
 
 #Description of data
 MBT_description <- describe(MBT, skew = T, IQR = T)
-MBT_description_grouped <- describeBy(MBT, group = "Disease", skew = T, IQR = T)
-MBT_description_grouped_amyl <- describeBy(MBT, group = "Disease_amyloid", skew = T, IQR = T)
+MBT_description_grouped <- describeBy(MBT, group = "Disease_NO", skew = T, IQR = T)
+names(MBT_description_grouped) <- levels(MBT$Disease_NO)
+MBT_description_grouped_amyl <- describeBy(MBT, group = "Disease_NO_amyloid", skew = T, IQR = T)
+names(MBT_description_grouped_amyl) <- levels(MBT$Disease_NO_amyloid)
 
 
 ##histograms
@@ -445,34 +445,34 @@ MBT_description_grouped$"PD-NC"["ID*","n"]
 function_sex_count(MBT, "PD-NC")
 MBT_description_grouped$"PD-MCI"["ID*","n"]
 function_sex_count(MBT, "PD-MCI")
-MBT_description_grouped$"aMCI AD"["ID*","n"]
+MBT_description_grouped$"AD-aMCI"["ID*","n"]
 function_sex_count(MBT, "AD-aMCI")
-MBT_description_grouped_amyl$"aMCI AD"["ID*","n"]
+MBT_description_grouped_amyl$"AD-aMCI"["ID*","n"]
 function_sex_count_amyl(MBT, "AD-aMCI")
-MBT_description_grouped_amyl$"aMCI AD amyloid"["ID*","n"]
-function_sex_count_amyl(MBT, "AD-aMCI Aß conf.")
+MBT_description_grouped_amyl$"AD-aMCI Aβ conf."["ID*","n"]
+function_sex_count_amyl(MBT, "AD-aMCI Aβ conf.")
 
 
 ###Table 01 Demographics:  Number of participants, means and SDs for Age and Education, and relevant tests (Kruskal-Walis, Chi-Squared, etc.). Divided by patient groups
 rownames(MBT_description_grouped$HC)
 
-fn_demographics_means <- function(Variable = "Age*", Group = MBT_description_grouped$"PD-NC"){
+fn_demographics_means <- function(Variable = "Age", Group = MBT_description_grouped$"PD-NC"){
   paste(fn_2decimals(Group[Variable,"mean"])," ","(\u00b1",fn_2decimals(Group[Variable,"sd"]),")", sep = "")
 }
 
 fn_demographics_n <- function(Group = MBT_description_grouped$HC){
-  as.character(Group["ID*","n"])
+  as.character(Group["ID","n"])
 }
 
 mbt_tab01 <- tribble(
   ~variable, ~HC_M, ~PDNC_M,  ~PDMCI_M, ~ADaMCI_ALL_M, ~p_4maingroups, ~ES_4maingroups, ~ADaMCI_unconf_M, ~ADaMCI_confamyl_M, ~p_5groups_amyl, ~ES_5groups_amyl,
-  "n (All)", fn_demographics_n(MBT_description_grouped$HC), fn_demographics_n(MBT_description_grouped$"PD-NC"), fn_demographics_n(MBT_description_grouped$"PD-MCI"), fn_demographics_n(MBT_description_grouped$"aMCI AD"), "", "", fn_demographics_n(MBT_description_grouped_amyl$"aMCI AD"), fn_demographics_n(MBT_description_grouped_amyl$"aMCI AD amyloid"), "", "",
-  "n (Females/Males)",function_sex_count(MBT, "HC"), function_sex_count(MBT, "PD-NC"), function_sex_count(MBT, "PD-MCI"), function_sex_count(MBT, "AD-aMCI"), fn_chi_p(MBT$Sex, MBT$Disease_NO), fn_chi_es(MBT$Sex, MBT$Disease_NO), function_sex_count_amyl(MBT, "AD-aMCI"), function_sex_count_amyl(MBT, "AD-aMCI Aß conf."), fn_chi_p(MBT$Sex, MBT$Disease_NO_amyloid), fn_chi_es(MBT$Sex, MBT$Disease_NO_amyloid),
-  "Age", fn_demographics_means("Age*", MBT_description_grouped$HC),fn_demographics_means("Age*", MBT_description_grouped$"PD-NC"),fn_demographics_means("Age*", MBT_description_grouped$"PD-MCI"),fn_demographics_means("Age*", MBT_description_grouped$"aMCI AD"), fn_kw_p(MBT$Age,MBT$Disease_NO,MBT), fn_kw_es(MBT$Age,MBT$Disease_NO,MBT), fn_demographics_means("Age*", MBT_description_grouped_amyl$"aMCI AD"),fn_demographics_means("Age*", MBT_description_grouped_amyl$"aMCI AD amyloid"), fn_kw_p(MBT$Age, MBT$Disease_NO_amyloid, MBT), fn_kw_es(MBT$Age, MBT$Disease_NO_amyloid, MBT),
-  "Edu", fn_demographics_means("Edu*", MBT_description_grouped$HC),fn_demographics_means("Edu*", MBT_description_grouped$"PD-NC"),fn_demographics_means("Edu*", MBT_description_grouped$"PD-MCI"),fn_demographics_means("Edu*", MBT_description_grouped$"aMCI AD"), fn_kw_p(MBT$Edu,MBT$Disease_NO,MBT), fn_kw_es(MBT$Edu,MBT$Disease_NO,MBT), fn_demographics_means("Edu*", MBT_description_grouped_amyl$"aMCI AD"),fn_demographics_means("Edu*", MBT_description_grouped_amyl$"aMCI AD amyloid"), fn_kw_p(MBT$Edu, MBT$Disease_NO_amyloid, MBT), fn_kw_es(MBT$Edu, MBT$Disease_NO_amyloid, MBT),
+  "n (All)", fn_demographics_n(MBT_description_grouped$HC), fn_demographics_n(MBT_description_grouped$"PD-NC"), fn_demographics_n(MBT_description_grouped$"PD-MCI"), fn_demographics_n(MBT_description_grouped$"AD-aMCI"), "", "", fn_demographics_n(MBT_description_grouped_amyl$"AD-aMCI"), fn_demographics_n(MBT_description_grouped_amyl$"AD-aMCI Aβ conf."), "", "",
+  "n (Females/Males)",function_sex_count(MBT, "HC"), function_sex_count(MBT, "PD-NC"), function_sex_count(MBT, "PD-MCI"), function_sex_count(MBT, "AD-aMCI"), fn_chi_p(MBT$Sex, MBT$Disease_NO), fn_chi_es(MBT$Sex, MBT$Disease_NO), function_sex_count_amyl(MBT, "AD-aMCI"), function_sex_count_amyl(MBT, "AD-aMCI Aβ conf."), fn_chi_p(MBT$Sex, MBT$Disease_NO_amyloid), fn_chi_es(MBT$Sex, MBT$Disease_NO_amyloid),
+  "Age", fn_demographics_means("Age", MBT_description_grouped$HC),fn_demographics_means("Age", MBT_description_grouped$"PD-NC"),fn_demographics_means("Age", MBT_description_grouped$"PD-MCI"),fn_demographics_means("Age", MBT_description_grouped$"AD-aMCI"), fn_kw_p(MBT$Age,MBT$Disease_NO,MBT), fn_kw_es(MBT$Age,MBT$Disease_NO,MBT), fn_demographics_means("Age", MBT_description_grouped_amyl$"AD-aMCI"),fn_demographics_means("Age", MBT_description_grouped_amyl$"AD-aMCI Aβ conf."), fn_kw_p(MBT$Age, MBT$Disease_NO_amyloid, MBT), fn_kw_es(MBT$Age, MBT$Disease_NO_amyloid, MBT),
+  "Edu", fn_demographics_means("Edu", MBT_description_grouped$HC),fn_demographics_means("Edu", MBT_description_grouped$"PD-NC"),fn_demographics_means("Edu", MBT_description_grouped$"PD-MCI"),fn_demographics_means("Edu", MBT_description_grouped$"AD-aMCI"), fn_kw_p(MBT$Edu,MBT$Disease_NO,MBT), fn_kw_es(MBT$Edu,MBT$Disease_NO,MBT), fn_demographics_means("Edu", MBT_description_grouped_amyl$"AD-aMCI"),fn_demographics_means("Edu", MBT_description_grouped_amyl$"AD-aMCI Aβ conf."), fn_kw_p(MBT$Edu, MBT$Disease_NO_amyloid, MBT), fn_kw_es(MBT$Edu, MBT$Disease_NO_amyloid, MBT),
 )
 
-write.csv(mbt_tab01, "mbt_tab01.csv", na = "NA")
+write.csv(mbt_tab01, "MBT_tab01.csv", na = "NA")
 
 
 ##Test scores of healthy controls and patient groups - compare means
@@ -498,21 +498,23 @@ posthoc_MBT_IR_PIP <- function_kw(MBT$MBT_IR_PIP, MBT$Disease_NO, MBT)
 ###Table 02 Test scores of healthy controls and patients’ groups
 mbt_tab02 <- tribble(
   ~variable, ~HC_M, ~PDNC_M,  ~PDMCI_M, ~ADaMCI_ALL_M, ~p_4maingroups, ~ES_4maingroups, ~ADaMCI_unconf_M, ~ADaMCI_confamyl_M, ~p_5groups_amyl, ~ES_5groups_amyl,
-  "MMSE", fn_demographics_means("MMSE*", MBT_description_grouped$HC), fn_demographics_means("MMSE*", MBT_description_grouped$"PD-NC"),fn_demographics_means("MMSE*", MBT_description_grouped$"PD-MCI"), fn_demographics_means("MMSE*", MBT_description_grouped$"aMCI AD"), fn_kw_p(MBT$MMSE,MBT$Disease_NO,MBT), fn_kw_es(MBT$MMSE,MBT$Disease_NO,MBT), fn_demographics_means("MMSE*", MBT_description_grouped_amyl$"aMCI AD"),fn_demographics_means("MMSE*", MBT_description_grouped_amyl$"aMCI AD amyloid"), fn_kw_p(MBT$MMSE, MBT$Disease_NO_amyloid, MBT), fn_kw_es(MBT$MMSE, MBT$Disease_NO_amyloid, MBT),
-  "TMT-A", fn_demographics_means("TMTA*", MBT_description_grouped$HC), fn_demographics_means("TMTA*", MBT_description_grouped$"PD-NC"),fn_demographics_means("TMTA*", MBT_description_grouped$"PD-MCI"), fn_demographics_means("TMTA*", MBT_description_grouped$"aMCI AD"), fn_kw_p(MBT$TMTA,MBT$Disease_NO,MBT), fn_kw_es(MBT$TMTA,MBT$Disease_NO,MBT), fn_demographics_means("TMTA*", MBT_description_grouped_amyl$"aMCI AD"),fn_demographics_means("TMTA*", MBT_description_grouped_amyl$"aMCI AD amyloid"), fn_kw_p(MBT$TMTA, MBT$Disease_NO_amyloid, MBT), fn_kw_es(MBT$TMTA, MBT$Disease_NO_amyloid, MBT),
-  "TMT-B", fn_demographics_means("TMTB*", MBT_description_grouped$HC), fn_demographics_means("TMTB*", MBT_description_grouped$"PD-NC"),fn_demographics_means("TMTB*", MBT_description_grouped$"PD-MCI"), fn_demographics_means("TMTB*", MBT_description_grouped$"aMCI AD"), fn_kw_p(MBT$TMTB,MBT$Disease_NO,MBT), fn_kw_es(MBT$TMTB,MBT$Disease_NO,MBT), fn_demographics_means("TMTB*", MBT_description_grouped_amyl$"aMCI AD"),fn_demographics_means("TMTB*", MBT_description_grouped_amyl$"aMCI AD amyloid"), fn_kw_p(MBT$TMTB, MBT$Disease_NO_amyloid, MBT), fn_kw_es(MBT$TMTB, MBT$Disease_NO_amyloid, MBT),
-  "PST-D", fn_demographics_means("StroopDots*", MBT_description_grouped$HC), fn_demographics_means("StroopDots*", MBT_description_grouped$"PD-NC"),fn_demographics_means("StroopDots*", MBT_description_grouped$"PD-MCI"), fn_demographics_means("StroopDots*", MBT_description_grouped$"aMCI AD"), fn_kw_p(MBT$StroopDots,MBT$Disease_NO,MBT), fn_kw_es(MBT$StroopDots,MBT$Disease_NO,MBT), fn_demographics_means("StroopDots*", MBT_description_grouped_amyl$"aMCI AD"),fn_demographics_means("StroopDots*", MBT_description_grouped_amyl$"aMCI AD amyloid"), fn_kw_p(MBT$StroopDots, MBT$Disease_NO_amyloid, MBT), fn_kw_es(MBT$StroopDots, MBT$Disease_NO_amyloid, MBT),
-  "PST-W", fn_demographics_means("StroopWords*", MBT_description_grouped$HC), fn_demographics_means("StroopWords*", MBT_description_grouped$"PD-NC"),fn_demographics_means("StroopWords*", MBT_description_grouped$"PD-MCI"), fn_demographics_means("StroopWords*", MBT_description_grouped$"aMCI AD"), fn_kw_p(MBT$StroopWords,MBT$Disease_NO,MBT), fn_kw_es(MBT$StroopWords,MBT$Disease_NO,MBT), fn_demographics_means("StroopWords*", MBT_description_grouped_amyl$"aMCI AD"),fn_demographics_means("StroopWords*", MBT_description_grouped_amyl$"aMCI AD amyloid"), fn_kw_p(MBT$StroopWords, MBT$Disease_NO_amyloid, MBT), fn_kw_es(MBT$StroopWords, MBT$Disease_NO_amyloid, MBT),
-  "PST-C", fn_demographics_means("StroopColors*", MBT_description_grouped$HC), fn_demographics_means("StroopColors*", MBT_description_grouped$"PD-NC"),fn_demographics_means("StroopColors*", MBT_description_grouped$"PD-MCI"), fn_demographics_means("StroopColors*", MBT_description_grouped$"aMCI AD"), fn_kw_p(MBT$StroopColors,MBT$Disease_NO,MBT), fn_kw_es(MBT$StroopColors,MBT$Disease_NO,MBT), fn_demographics_means("StroopColors*", MBT_description_grouped_amyl$"aMCI AD"),fn_demographics_means("StroopColors*", MBT_description_grouped_amyl$"aMCI AD amyloid"), fn_kw_p(MBT$StroopColors, MBT$Disease_NO_amyloid, MBT), fn_kw_es(MBT$StroopColors, MBT$Disease_NO_amyloid, MBT),
-  "RAVLT T1-5", fn_demographics_means("RAVLT15*", MBT_description_grouped$HC), fn_demographics_means("RAVLT15*", MBT_description_grouped$"PD-NC"),fn_demographics_means("RAVLT15*", MBT_description_grouped$"PD-MCI"), fn_demographics_means("RAVLT15*", MBT_description_grouped$"aMCI AD"), fn_kw_p(MBT$RAVLT15,MBT$Disease_NO,MBT), fn_kw_es(MBT$RAVLT15,MBT$Disease_NO,MBT), fn_demographics_means("RAVLT15*", MBT_description_grouped_amyl$"aMCI AD"),fn_demographics_means("RAVLT15*", MBT_description_grouped_amyl$"aMCI AD amyloid"), fn_kw_p(MBT$RAVLT15, MBT$Disease_NO_amyloid, MBT), fn_kw_es(MBT$RAVLT15, MBT$Disease_NO_amyloid, MBT),
-  "RAVLT-30 min", fn_demographics_means("RAVLT30*", MBT_description_grouped$HC), fn_demographics_means("RAVLT30*", MBT_description_grouped$"PD-NC"),fn_demographics_means("RAVLT30*", MBT_description_grouped$"PD-MCI"), fn_demographics_means("RAVLT30*", MBT_description_grouped$"aMCI AD"), fn_kw_p(MBT$RAVLT30,MBT$Disease_NO,MBT), fn_kw_es(MBT$RAVLT30,MBT$Disease_NO,MBT), fn_demographics_means("RAVLT30*", MBT_description_grouped_amyl$"aMCI AD"),fn_demographics_means("RAVLT30*", MBT_description_grouped_amyl$"aMCI AD amyloid"), fn_kw_p(MBT$RAVLT30, MBT$Disease_NO_amyloid, MBT), fn_kw_es(MBT$RAVLT30, MBT$Disease_NO_amyloid, MBT),
-  "MBT CR L1", fn_demographics_means("MBT_IR_CR_L1*", MBT_description_grouped$HC), fn_demographics_means("MBT_IR_CR_L1*", MBT_description_grouped$"PD-NC"),fn_demographics_means("MBT_IR_CR_L1*", MBT_description_grouped$"PD-MCI"), fn_demographics_means("MBT_IR_CR_L1*", MBT_description_grouped$"aMCI AD"), fn_kw_p(MBT$MBT_IR_CR_L1,MBT$Disease_NO,MBT), fn_kw_es(MBT$MBT_IR_CR_L1,MBT$Disease_NO,MBT), fn_demographics_means("MBT_IR_CR_L1*", MBT_description_grouped_amyl$"aMCI AD"),fn_demographics_means("MBT_IR_CR_L1*", MBT_description_grouped_amyl$"aMCI AD amyloid"), fn_kw_p(MBT$MBT_IR_CR_L1, MBT$Disease_NO_amyloid, MBT), fn_kw_es(MBT$MBT_IR_CR_L1, MBT$Disease_NO_amyloid, MBT),
-  "MBT CR L2", fn_demographics_means("MBT_IR_CR_L2*", MBT_description_grouped$HC), fn_demographics_means("MBT_IR_CR_L2*", MBT_description_grouped$"PD-NC"),fn_demographics_means("MBT_IR_CR_L2*", MBT_description_grouped$"PD-MCI"), fn_demographics_means("MBT_IR_CR_L2*", MBT_description_grouped$"aMCI AD"), fn_kw_p(MBT$MBT_IR_CR_L2,MBT$Disease_NO,MBT), fn_kw_es(MBT$MBT_IR_CR_L2,MBT$Disease_NO,MBT), fn_demographics_means("MBT_IR_CR_L2*", MBT_description_grouped_amyl$"aMCI AD"),fn_demographics_means("MBT_IR_CR_L2*", MBT_description_grouped_amyl$"aMCI AD amyloid"), fn_kw_p(MBT$MBT_IR_CR_L2, MBT$Disease_NO_amyloid, MBT), fn_kw_es(MBT$MBT_IR_CR_L2, MBT$Disease_NO_amyloid, MBT),
-  "MBT CR L1+L2", fn_demographics_means("MBT_IR_CR_L1L2*", MBT_description_grouped$HC), fn_demographics_means("MBT_IR_CR_L1L2*", MBT_description_grouped$"PD-NC"),fn_demographics_means("MBT_IR_CR_L1L2*", MBT_description_grouped$"PD-MCI"), fn_demographics_means("MBT_IR_CR_L1L2*", MBT_description_grouped$"aMCI AD"), fn_kw_p(MBT$MBT_IR_CR_L1L2,MBT$Disease_NO,MBT), fn_kw_es(MBT$MBT_IR_CR_L1L2,MBT$Disease_NO,MBT), fn_demographics_means("MBT_IR_CR_L1L2*", MBT_description_grouped_amyl$"aMCI AD"),fn_demographics_means("MBT_IR_CR_L1L2*", MBT_description_grouped_amyl$"aMCI AD amyloid"), fn_kw_p(MBT$MBT_IR_CR_L1L2, MBT$Disease_NO_amyloid, MBT), fn_kw_es(MBT$MBT_IR_CR_L1L2, MBT$Disease_NO_amyloid, MBT),
-  "MBT-TIP", fn_demographics_means("MBT_IR_TIP*", MBT_description_grouped$HC), fn_demographics_means("MBT_IR_TIP*", MBT_description_grouped$"PD-NC"),fn_demographics_means("MBT_IR_TIP*", MBT_description_grouped$"PD-MCI"), fn_demographics_means("MBT_IR_TIP*", MBT_description_grouped$"aMCI AD"), fn_kw_p(MBT$MBT_IR_TIP,MBT$Disease_NO,MBT), fn_kw_es(MBT$MBT_IR_TIP,MBT$Disease_NO,MBT), fn_demographics_means("MBT_IR_TIP*", MBT_description_grouped_amyl$"aMCI AD"),fn_demographics_means("MBT_IR_TIP*", MBT_description_grouped_amyl$"aMCI AD amyloid"), fn_kw_p(MBT$MBT_IR_TIP, MBT$Disease_NO_amyloid, MBT), fn_kw_es(MBT$MBT_IR_TIP, MBT$Disease_NO_amyloid, MBT),
-  "MBT-PIP", fn_demographics_means("MBT_IR_PIP*", MBT_description_grouped$HC), fn_demographics_means("MBT_IR_PIP*", MBT_description_grouped$"PD-NC"),fn_demographics_means("MBT_IR_PIP*", MBT_description_grouped$"PD-MCI"), fn_demographics_means("MBT_IR_PIP*", MBT_description_grouped$"aMCI AD"), fn_kw_p(MBT$MBT_IR_PIP,MBT$Disease_NO,MBT), fn_kw_es(MBT$MBT_IR_PIP,MBT$Disease_NO,MBT), fn_demographics_means("MBT_IR_PIP*", MBT_description_grouped_amyl$"aMCI AD"),fn_demographics_means("MBT_IR_PIP*", MBT_description_grouped_amyl$"aMCI AD amyloid"), fn_kw_p(MBT$MBT_IR_PIP, MBT$Disease_NO_amyloid, MBT), fn_kw_es(MBT$MBT_IR_PIP, MBT$Disease_NO_amyloid, MBT),
-  "MBT-FR 2min", fn_demographics_means("MBT_IR_FR_30.120*", MBT_description_grouped$HC), fn_demographics_means("MBT_IR_FR_30.120*", MBT_description_grouped$"PD-NC"),fn_demographics_means("MBT_IR_FR_30.120*", MBT_description_grouped$"PD-MCI"), fn_demographics_means("MBT_IR_FR_30.120*", MBT_description_grouped$"aMCI AD"), fn_kw_p(MBT$MBT_IR_FR_30.120,MBT$Disease_NO,MBT), fn_kw_es(MBT$MBT_IR_FR_30.120,MBT$Disease_NO,MBT), fn_demographics_means("MBT_IR_FR_30.120*", MBT_description_grouped_amyl$"aMCI AD"),fn_demographics_means("MBT_IR_FR_30.120*", MBT_description_grouped_amyl$"aMCI AD amyloid"), fn_kw_p(MBT$MBT_IR_FR_30.120, MBT$Disease_NO_amyloid, MBT), fn_kw_es(MBT$MBT_IR_FR_30.120, MBT$Disease_NO_amyloid, MBT)
+  "MMSE", fn_demographics_means("MMSE", MBT_description_grouped$HC), fn_demographics_means("MMSE", MBT_description_grouped$"PD-NC"),fn_demographics_means("MMSE", MBT_description_grouped$"PD-MCI"), fn_demographics_means("MMSE", MBT_description_grouped$"AD-aMCI"), fn_kw_p(MBT$MMSE,MBT$Disease_NO,MBT), fn_kw_es(MBT$MMSE,MBT$Disease_NO,MBT), fn_demographics_means("MMSE", MBT_description_grouped_amyl$"AD-aMCI"),fn_demographics_means("MMSE", MBT_description_grouped_amyl$"AD-aMCI Aβ conf."), fn_kw_p(MBT$MMSE, MBT$Disease_NO_amyloid, MBT), fn_kw_es(MBT$MMSE, MBT$Disease_NO_amyloid, MBT),
+  "TMT-A", fn_demographics_means("TMTA", MBT_description_grouped$HC), fn_demographics_means("TMTA", MBT_description_grouped$"PD-NC"),fn_demographics_means("TMTA", MBT_description_grouped$"PD-MCI"), fn_demographics_means("TMTA", MBT_description_grouped$"AD-aMCI"), fn_kw_p(MBT$TMTA,MBT$Disease_NO,MBT), fn_kw_es(MBT$TMTA,MBT$Disease_NO,MBT), fn_demographics_means("TMTA", MBT_description_grouped_amyl$"AD-aMCI"),fn_demographics_means("TMTA", MBT_description_grouped_amyl$"AD-aMCI Aβ conf."), fn_kw_p(MBT$TMTA, MBT$Disease_NO_amyloid, MBT), fn_kw_es(MBT$TMTA, MBT$Disease_NO_amyloid, MBT),
+  "TMT-B", fn_demographics_means("TMTB", MBT_description_grouped$HC), fn_demographics_means("TMTB", MBT_description_grouped$"PD-NC"),fn_demographics_means("TMTB", MBT_description_grouped$"PD-MCI"), fn_demographics_means("TMTB", MBT_description_grouped$"AD-aMCI"), fn_kw_p(MBT$TMTB,MBT$Disease_NO,MBT), fn_kw_es(MBT$TMTB,MBT$Disease_NO,MBT), fn_demographics_means("TMTB", MBT_description_grouped_amyl$"AD-aMCI"),fn_demographics_means("TMTB", MBT_description_grouped_amyl$"AD-aMCI Aβ conf."), fn_kw_p(MBT$TMTB, MBT$Disease_NO_amyloid, MBT), fn_kw_es(MBT$TMTB, MBT$Disease_NO_amyloid, MBT),
+  "PST-D", fn_demographics_means("StroopDots", MBT_description_grouped$HC), fn_demographics_means("StroopDots", MBT_description_grouped$"PD-NC"),fn_demographics_means("StroopDots", MBT_description_grouped$"PD-MCI"), fn_demographics_means("StroopDots", MBT_description_grouped$"AD-aMCI"), fn_kw_p(MBT$StroopDots,MBT$Disease_NO,MBT), fn_kw_es(MBT$StroopDots,MBT$Disease_NO,MBT), fn_demographics_means("StroopDots", MBT_description_grouped_amyl$"AD-aMCI"),fn_demographics_means("StroopDots", MBT_description_grouped_amyl$"AD-aMCI Aβ conf."), fn_kw_p(MBT$StroopDots, MBT$Disease_NO_amyloid, MBT), fn_kw_es(MBT$StroopDots, MBT$Disease_NO_amyloid, MBT),
+  "PST-W", fn_demographics_means("StroopWords", MBT_description_grouped$HC), fn_demographics_means("StroopWords", MBT_description_grouped$"PD-NC"),fn_demographics_means("StroopWords", MBT_description_grouped$"PD-MCI"), fn_demographics_means("StroopWords", MBT_description_grouped$"AD-aMCI"), fn_kw_p(MBT$StroopWords,MBT$Disease_NO,MBT), fn_kw_es(MBT$StroopWords,MBT$Disease_NO,MBT), fn_demographics_means("StroopWords", MBT_description_grouped_amyl$"AD-aMCI"),fn_demographics_means("StroopWords", MBT_description_grouped_amyl$"AD-aMCI Aβ conf."), fn_kw_p(MBT$StroopWords, MBT$Disease_NO_amyloid, MBT), fn_kw_es(MBT$StroopWords, MBT$Disease_NO_amyloid, MBT),
+  "PST-C", fn_demographics_means("StroopColors", MBT_description_grouped$HC), fn_demographics_means("StroopColors", MBT_description_grouped$"PD-NC"),fn_demographics_means("StroopColors", MBT_description_grouped$"PD-MCI"), fn_demographics_means("StroopColors", MBT_description_grouped$"AD-aMCI"), fn_kw_p(MBT$StroopColors,MBT$Disease_NO,MBT), fn_kw_es(MBT$StroopColors,MBT$Disease_NO,MBT), fn_demographics_means("StroopColors", MBT_description_grouped_amyl$"AD-aMCI"),fn_demographics_means("StroopColors", MBT_description_grouped_amyl$"AD-aMCI Aβ conf."), fn_kw_p(MBT$StroopColors, MBT$Disease_NO_amyloid, MBT), fn_kw_es(MBT$StroopColors, MBT$Disease_NO_amyloid, MBT),
+  "RAVLT T1-5", fn_demographics_means("RAVLT15", MBT_description_grouped$HC), fn_demographics_means("RAVLT15", MBT_description_grouped$"PD-NC"),fn_demographics_means("RAVLT15", MBT_description_grouped$"PD-MCI"), fn_demographics_means("RAVLT15", MBT_description_grouped$"AD-aMCI"), fn_kw_p(MBT$RAVLT15,MBT$Disease_NO,MBT), fn_kw_es(MBT$RAVLT15,MBT$Disease_NO,MBT), fn_demographics_means("RAVLT15", MBT_description_grouped_amyl$"AD-aMCI"),fn_demographics_means("RAVLT15", MBT_description_grouped_amyl$"AD-aMCI Aβ conf."), fn_kw_p(MBT$RAVLT15, MBT$Disease_NO_amyloid, MBT), fn_kw_es(MBT$RAVLT15, MBT$Disease_NO_amyloid, MBT),
+  "RAVLT-30 min", fn_demographics_means("RAVLT30", MBT_description_grouped$HC), fn_demographics_means("RAVLT30", MBT_description_grouped$"PD-NC"),fn_demographics_means("RAVLT30", MBT_description_grouped$"PD-MCI"), fn_demographics_means("RAVLT30", MBT_description_grouped$"AD-aMCI"), fn_kw_p(MBT$RAVLT30,MBT$Disease_NO,MBT), fn_kw_es(MBT$RAVLT30,MBT$Disease_NO,MBT), fn_demographics_means("RAVLT30", MBT_description_grouped_amyl$"AD-aMCI"),fn_demographics_means("RAVLT30", MBT_description_grouped_amyl$"AD-aMCI Aβ conf."), fn_kw_p(MBT$RAVLT30, MBT$Disease_NO_amyloid, MBT), fn_kw_es(MBT$RAVLT30, MBT$Disease_NO_amyloid, MBT),
+  "MBT CR L1", fn_demographics_means("MBT_IR_CR_L1", MBT_description_grouped$HC), fn_demographics_means("MBT_IR_CR_L1", MBT_description_grouped$"PD-NC"),fn_demographics_means("MBT_IR_CR_L1", MBT_description_grouped$"PD-MCI"), fn_demographics_means("MBT_IR_CR_L1", MBT_description_grouped$"AD-aMCI"), fn_kw_p(MBT$MBT_IR_CR_L1,MBT$Disease_NO,MBT), fn_kw_es(MBT$MBT_IR_CR_L1,MBT$Disease_NO,MBT), fn_demographics_means("MBT_IR_CR_L1", MBT_description_grouped_amyl$"AD-aMCI"),fn_demographics_means("MBT_IR_CR_L1", MBT_description_grouped_amyl$"AD-aMCI Aβ conf."), fn_kw_p(MBT$MBT_IR_CR_L1, MBT$Disease_NO_amyloid, MBT), fn_kw_es(MBT$MBT_IR_CR_L1, MBT$Disease_NO_amyloid, MBT),
+  "MBT CR L2", fn_demographics_means("MBT_IR_CR_L2", MBT_description_grouped$HC), fn_demographics_means("MBT_IR_CR_L2", MBT_description_grouped$"PD-NC"),fn_demographics_means("MBT_IR_CR_L2", MBT_description_grouped$"PD-MCI"), fn_demographics_means("MBT_IR_CR_L2", MBT_description_grouped$"AD-aMCI"), fn_kw_p(MBT$MBT_IR_CR_L2,MBT$Disease_NO,MBT), fn_kw_es(MBT$MBT_IR_CR_L2,MBT$Disease_NO,MBT), fn_demographics_means("MBT_IR_CR_L2", MBT_description_grouped_amyl$"AD-aMCI"),fn_demographics_means("MBT_IR_CR_L2", MBT_description_grouped_amyl$"AD-aMCI Aβ conf."), fn_kw_p(MBT$MBT_IR_CR_L2, MBT$Disease_NO_amyloid, MBT), fn_kw_es(MBT$MBT_IR_CR_L2, MBT$Disease_NO_amyloid, MBT),
+  "MBT CR L1+L2", fn_demographics_means("MBT_IR_CR_L1L2", MBT_description_grouped$HC), fn_demographics_means("MBT_IR_CR_L1L2", MBT_description_grouped$"PD-NC"),fn_demographics_means("MBT_IR_CR_L1L2", MBT_description_grouped$"PD-MCI"), fn_demographics_means("MBT_IR_CR_L1L2", MBT_description_grouped$"AD-aMCI"), fn_kw_p(MBT$MBT_IR_CR_L1L2,MBT$Disease_NO,MBT), fn_kw_es(MBT$MBT_IR_CR_L1L2,MBT$Disease_NO,MBT), fn_demographics_means("MBT_IR_CR_L1L2", MBT_description_grouped_amyl$"AD-aMCI"),fn_demographics_means("MBT_IR_CR_L1L2", MBT_description_grouped_amyl$"AD-aMCI Aβ conf."), fn_kw_p(MBT$MBT_IR_CR_L1L2, MBT$Disease_NO_amyloid, MBT), fn_kw_es(MBT$MBT_IR_CR_L1L2, MBT$Disease_NO_amyloid, MBT),
+  "MBT-TIP", fn_demographics_means("MBT_IR_TIP", MBT_description_grouped$HC), fn_demographics_means("MBT_IR_TIP", MBT_description_grouped$"PD-NC"),fn_demographics_means("MBT_IR_TIP", MBT_description_grouped$"PD-MCI"), fn_demographics_means("MBT_IR_TIP", MBT_description_grouped$"AD-aMCI"), fn_kw_p(MBT$MBT_IR_TIP,MBT$Disease_NO,MBT), fn_kw_es(MBT$MBT_IR_TIP,MBT$Disease_NO,MBT), fn_demographics_means("MBT_IR_TIP", MBT_description_grouped_amyl$"AD-aMCI"),fn_demographics_means("MBT_IR_TIP", MBT_description_grouped_amyl$"AD-aMCI Aβ conf."), fn_kw_p(MBT$MBT_IR_TIP, MBT$Disease_NO_amyloid, MBT), fn_kw_es(MBT$MBT_IR_TIP, MBT$Disease_NO_amyloid, MBT),
+  "MBT-PIP", fn_demographics_means("MBT_IR_PIP", MBT_description_grouped$HC), fn_demographics_means("MBT_IR_PIP", MBT_description_grouped$"PD-NC"),fn_demographics_means("MBT_IR_PIP", MBT_description_grouped$"PD-MCI"), fn_demographics_means("MBT_IR_PIP", MBT_description_grouped$"AD-aMCI"), fn_kw_p(MBT$MBT_IR_PIP,MBT$Disease_NO,MBT), fn_kw_es(MBT$MBT_IR_PIP,MBT$Disease_NO,MBT), fn_demographics_means("MBT_IR_PIP", MBT_description_grouped_amyl$"AD-aMCI"),fn_demographics_means("MBT_IR_PIP", MBT_description_grouped_amyl$"AD-aMCI Aβ conf."), fn_kw_p(MBT$MBT_IR_PIP, MBT$Disease_NO_amyloid, MBT), fn_kw_es(MBT$MBT_IR_PIP, MBT$Disease_NO_amyloid, MBT),
+  "MBT-FR 2min", fn_demographics_means("MBT_IR_FR_30.120", MBT_description_grouped$HC), fn_demographics_means("MBT_IR_FR_30.120", MBT_description_grouped$"PD-NC"),fn_demographics_means("MBT_IR_FR_30.120", MBT_description_grouped$"PD-MCI"), fn_demographics_means("MBT_IR_FR_30.120", MBT_description_grouped$"AD-aMCI"), fn_kw_p(MBT$MBT_IR_FR_30.120,MBT$Disease_NO,MBT), fn_kw_es(MBT$MBT_IR_FR_30.120,MBT$Disease_NO,MBT), fn_demographics_means("MBT_IR_FR_30.120", MBT_description_grouped_amyl$"AD-aMCI"),fn_demographics_means("MBT_IR_FR_30.120", MBT_description_grouped_amyl$"AD-aMCI Aβ conf."), fn_kw_p(MBT$MBT_IR_FR_30.120, MBT$Disease_NO_amyloid, MBT), fn_kw_es(MBT$MBT_IR_FR_30.120, MBT$Disease_NO_amyloid, MBT)
 )
+
+write.csv(mbt_tab02, "MBT_tab02.csv", na = "NA")
 
 
 ##function: correlation table (thanks Igluca from Bavaria!!  [https://github.com/crsh/papaja/issues/210])
@@ -559,8 +561,9 @@ correlation_tab <- function(x, y, z, export=FALSE) { #x= corr.matrix, y=use, z=m
   
 }
 
-##Correlation between MBT measures and demographics (Age, Years of Education)
-MBT_Tab3_corr <- select(MBT, 
+##Correlation between MBT measures and demographics in healthy controls (Age, Years of Education)
+MBT_HCcorr <- filter(MBT, Disease == "HC")
+MBT_Tab3_corr <- select(MBT_HCcorr, 
                         Age,
                         Edu,
                         MBT_IR_CR_L1,
@@ -582,44 +585,46 @@ MBT_tab3_corr_results_csv02 <- filter(MBT_tab3_corr_results_csv02,
                                       !row_number() %in% c(1, 2))
 MBT_tab03 <- mutate(MBT_tab3_corr_results_csv02, 
                                       Sex=c(
-                                        fn_wt_t_stars(MBT$MBT_IR_CR_L1, MBT$Sex, MBT),
-                                        fn_wt_t_stars(MBT$MBT_IR_CR_L2, MBT$Sex, MBT),
-                                        fn_wt_t_stars(MBT$MBT_IR_CR_L1L2, MBT$Sex, MBT),
-                                        fn_wt_t_stars(MBT$MBT_IR_TIP, MBT$Sex, MBT),
-                                        fn_wt_t_stars(MBT$MBT_IR_PIP, MBT$Sex, MBT),
-                                        fn_wt_t_stars(MBT$MBT_IR_FR_30.120, MBT$Sex, MBT)
+                                        fn_wt_t_stars(MBT_HCcorr$MBT_IR_CR_L1, MBT_HCcorr$Sex, MBT_HCcorr),
+                                        fn_wt_t_stars(MBT_HCcorr$MBT_IR_CR_L2, MBT_HCcorr$Sex, MBT_HCcorr),
+                                        fn_wt_t_stars(MBT_HCcorr$MBT_IR_CR_L1L2, MBT_HCcorr$Sex, MBT_HCcorr),
+                                        fn_wt_t_stars(MBT_HCcorr$MBT_IR_TIP, MBT_HCcorr$Sex, MBT_HCcorr),
+                                        fn_wt_t_stars(MBT_HCcorr$MBT_IR_PIP, MBT_HCcorr$Sex, MBT_HCcorr),
+                                        fn_wt_t_stars(MBT_HCcorr$MBT_IR_FR_30.120, MBT_HCcorr$Sex, MBT_HCcorr)
                                         )
                                       )
 
 write.csv(MBT_tab03, "MBT_tab03.csv", na = "NA")
 
+
+
 ##Correlation between MBT measures and other neuropsychological methods
 mbt_supp_tab2_corr <- select(MBT, 
-                        MBT_IR_CR_L1L2,
-                        MBT_IR_TIP,
-                        MBT_IR_PIP,
-                        MBT_IR_FR_30.120,
-                        MMSE,
-                        TMTA,
-                        TMTB,
-                        StroopDots,
-                        StroopWords,
-                        StroopColors,
-                        RAVLT15,
-                        RAVLT30
-                        )
+                             MBT_IR_CR_L1L2,
+                             MBT_IR_TIP,
+                             MBT_IR_PIP,
+                             MBT_IR_FR_30.120,
+                             MMSE,
+                             TMTA,
+                             TMTB,
+                             StroopDots,
+                             StroopWords,
+                             StroopColors,
+                             RAVLT15,
+                             RAVLT30
+)
 
 mbt_supp_tab2_corr_results_csv <- correlation_tab(mbt_supp_tab2_corr, "pairwise", "kendall", export = FALSE)
 rownames(mbt_supp_tab2_corr_results_csv)   <- c("MBT CR L1+L2", "MBT-TIP", "MBT-PIP", "MBT-FR 2min", "MMSE", "TMT-A", "TMT-B", "PST-D", "PST-W", "PST-C", "RAVLT 1-5", "RAVLT DR 30 min")
 colnames(mbt_supp_tab2_corr_results_csv)   <- c("M", "SD","MBT CR L1+L2", "MBT-TIP", "MBT-PIP", "MBT-FR 2min", "MMSE", "TMT-A", "TMT-B", "PST-D", "PST-W", "PST-C", "RAVLT 1-5")
 
 mbt_supp_tab2_corr_results_csv02 <- select(mbt_supp_tab2_corr_results_csv,
-                                      3,
-                                      4,
-                                      5,
-                                      6)
+                                           3,
+                                           4,
+                                           5,
+                                           6)
 mbt_supp_tab2_corr_results_csv02 <- filter(mbt_supp_tab2_corr_results_csv02, 
-                                      !row_number() %in% c(1))
+                                           !row_number() %in% c(1))
 
 write.csv(mbt_supp_tab2_corr_results_csv02, "MBT_supp_tab2.csv", na = "NA")
 
@@ -697,6 +702,7 @@ MBT_robust_ancova_HCADamyl_age
 
 
 #ROC
+windows(width=10, height=8)
 ROC_MBT_PDAD <- roc(formula=MBT$PDMCI_vs_aMCIAD ~MBT$MBT_IR_CR_L1L2+MBT$MBT_IR_TIP+MBT$MBT_IR_PIP+MBT$RAVLT30+MBT$RAVLT15, levels = c(3,4), na.rm = TRUE, auc = TRUE, ci = TRUE, plot= TRUE)
 ROC_MBT_PDADamyl <- roc(formula=MBT$PDMCI_vs_aMCIADamyloid ~MBT$MBT_IR_CR_L1L2+MBT$MBT_IR_TIP+MBT$MBT_IR_PIP+MBT$RAVLT30+MBT$RAVLT15, levels = c(3,5), na.rm = TRUE, auc = TRUE, ci = TRUE, plot= TRUE)
 ROC_MBT_HCAD <- roc(formula=MBT$HC_vs_aMCIAD ~MBT$MBT_IR_CR_L1L2+MBT$MBT_IR_TIP+MBT$MBT_IR_PIP+MBT$RAVLT30+MBT$RAVLT15, levels = c(1,4), na.rm = TRUE, auc = TRUE, ci = TRUE, plot= TRUE)
@@ -718,7 +724,7 @@ ROC_MBT_HCAD$'MBT$RAVLT30'$auc
 AUCCI_HCAD_RAVLT30
 
 
-###HC versus AD-aMCI amyloid confirmed
+###HC versus AD-aMCI Aβ conf. confirmed
 AUCCI_HCADamyl_MBT_TIP <- ci.auc(ROC_MBT_HCADamyl$'MBT$MBT_IR_TIP'$auc, conf.level=0.95, method=c("delong"))
 AUCCI_HCADamyl_MBT_PIP <- ci.auc(ROC_MBT_HCADamyl$'MBT$MBT_IR_PIP'$auc, conf.level=0.95, method=c("delong"))
 AUCCI_HCADamyl_RAVLT15 <- ci.auc(ROC_MBT_HCADamyl$'MBT$RAVLT15'$auc, conf.level=0.95, method=c("delong"))
@@ -843,7 +849,7 @@ coords(ROC_MBT_HCAD$`MBT$RAVLT30`, input="threshold", ret=c("threshold",
        drop=TRUE, best.method=c("youden"),
        best.weights=c(1, 0.5), transpose = FALSE, as.matrix=TRUE)
 
-###HC versus AD-aMCI amyloid confirmed
+###HC versus AD-aMCI Aβ conf. confirmed
 mbt_supp_tab3b <- coords(ROC_MBT_HCADamyl$`MBT$MBT_IR_TIP`, input="threshold", ret=c("threshold",
                                                                "specificity", "sensitivity","youden"),
        drop=TRUE, best.method=c("youden"),
@@ -893,80 +899,163 @@ coords(ROC_MBT_PDAD$`MBT$RAVLT30`, input="threshold", ret=c("threshold",
 
 
 ##ROC plots
-###function to add legend outside of a plot
-add_legend <- function(...) {
-  opar <- par(fig=c(0, 1, 0, 1), oma=c(0, 0, 0, 0), 
-              mar=c(0, 0, 0, 0), new=TRUE)
-  on.exit(par(opar))
-  plot(0, 0, type='n', bty='n', xaxt='n', yaxt='n')
-  legend(...)
-}
-
 ###PD-MCI versus AD-aMCI
-par(oma=c(2, 0, 0, 0), xaxs="i")
-roc(MBT$PDMCI_vs_aMCIAD, MBT$MBT_IR_TIP, plot=TRUE, percent=TRUE, col="#1c61b6", lwd=2, ci = T, print.auc=TRUE)
-plot.roc(MBT$PDMCI_vs_aMCIAD, MBT$MBT_IR_PIP, percent=TRUE, col="#008600", lwd=2, ci = T, print.auc=TRUE, add=TRUE, print.auc.y=45)
-plot.roc(MBT$PDMCI_vs_aMCIAD, MBT$RAVLT15, percent=TRUE, col="pink", lwd=2, ci = T, print.auc=TRUE, add=TRUE, print.auc.y=40)
-plot.roc(MBT$PDMCI_vs_aMCIAD, MBT$RAVLT30, percent=TRUE, col="red", lwd=2, ci = T, print.auc=TRUE, add=TRUE, print.auc.y=35)
-title(main="AUC: PD-MCI vs. aMCI AD", line = 2.5)
-add_legend("bottom", legend=c("MBT TIP", "MBT PIP", "RAVLT 1-5", "RAVLT Delayed Recall"), lwd=2, 
-           col=c("#1c61b6", "#008600", "pink", "red"),
-           horiz=T, bty='n', cex=0.8)
+#### Create layout matrix (1 column and 2 rows)
+layout(matrix(c(1, 2), nrow = 2, byrow = TRUE), heights = c(3, 0.2))
 
-###PD-MCI versus AD-aMCI beta-amyloid confirmed
-par(oma=c(2, 0, 0, 0), xaxs="i")
-roc(MBT$PDMCI_vs_aMCIADamyloid, MBT$MBT_IR_TIP, plot=TRUE, percent=TRUE, col="#1c61b6", lwd=2, ci = T, print.auc=TRUE)
-plot.roc(MBT$PDMCI_vs_aMCIADamyloid, MBT$MBT_IR_PIP, percent=TRUE, col="#008600", lwd=2, ci = T, print.auc=TRUE, add=TRUE, print.auc.y=45)
-plot.roc(MBT$PDMCI_vs_aMCIADamyloid, MBT$RAVLT15, percent=TRUE, col="pink", lwd=2, ci = T, print.auc=TRUE, add=TRUE, print.auc.y=40)
-plot.roc(MBT$PDMCI_vs_aMCIADamyloid, MBT$RAVLT30, percent=TRUE, col="red", lwd=2, ci = T, print.auc=TRUE, add=TRUE, print.auc.y=35)
-title(main="AUC: PD-MCI vs. aMCI AD Aß conf.", line = 2.5)
-add_legend("bottom", legend=c("MBT TIP", "MBT PIP", "RAVLT 1-5", "RAVLT Delayed Recall"), lwd=2, 
-           col=c("#1c61b6", "#008600", "pink", "red"),
-           horiz=T, bty='n', cex=0.8)
+#### Start plotting in the first cell
+par(mar = c(4, 4, 2, 2))
+
+#### Plot the first ROC curve
+rocobj13 <- roc(MBT$PDMCI_vs_aMCIAD, MBT$MBT_IR_TIP)
+plot(rocobj13, main="AUC: PD-MCI vs. AD-aMCI", percent=TRUE, col="#1c61b6")
+text(x=0.5, y=0.4, labels=paste0("AUC: ", round(AUCCI_PDAD_MBT_TIP[[2]], 3), "; ", 
+                                 round(AUCCI_PDAD_MBT_TIP[[1]], 3), "-", round(AUCCI_PDAD_MBT_TIP[[3]], 3)), 
+     col="#1c61b6", cex=0.9, adj=0)
+#### Add second ROC curve
+rocobj14 <- roc(MBT$PDMCI_vs_aMCIAD, MBT$MBT_IR_PIP)
+lines(rocobj14, percent=TRUE, col="#008600")
+text(x=0.5, y=0.35, labels=paste0("AUC: ", round(AUCCI_PDAD_MBT_PIP[[2]], 3), "; ", 
+                                  round(AUCCI_PDAD_MBT_PIP[[1]], 3), "-", round(AUCCI_PDAD_MBT_PIP[[3]], 3)), 
+     col="#008600", cex=0.9, adj=0)
+#### Add third ROC curve
+rocobj15 <- roc(MBT$PDMCI_vs_aMCIAD, MBT$RAVLT15)
+lines(rocobj15, percent=TRUE, col="pink")
+text(x=0.5, y=0.30, labels=paste0("AUC: ", round(AUCCI_PDAD_RAVLT15[[2]], 3), "; ", 
+                                  round(AUCCI_PDAD_RAVLT15[[1]], 3), "-", round(AUCCI_PDAD_RAVLT15[[3]], 3)), 
+     col="pink", cex=0.9, adj=0)
+#### Add fourth ROC curve
+rocobj16 <- roc(MBT$PDMCI_vs_aMCIAD, MBT$RAVLT30)
+lines(rocobj16, percent=TRUE, col="red")
+text(x=0.5, y=0.25, labels=paste0("AUC: ", round(AUCCI_PDAD_RAVLT30[[2]], 3), "; ", 
+                                  round(AUCCI_PDAD_RAVLT30[[1]], 3), "-", round(AUCCI_PDAD_RAVLT30[[3]], 3)), 
+     col="red", cex=0.9, adj=0)
+
+#### Move to the second cell for legend
+par(mar = c(0, 0, 0, 0))
+plot(1, type = "n", axes = FALSE, xlab = "", ylab = "", main = "")
+legend("bottom", inset=c(0, 0.4), legend = c("MBT TIP", "MBT PIP", "RAVLT 1-5", "RAVLT Delayed Recall"),
+       col = c("#1c61b6", "#008600", "pink", "red"), lwd = 2, cex = 0.55, bty = "n", xpd = TRUE, horiz = TRUE)
+
+
 
 ###HC versus AD-aMCI
-par(oma=c(2, 0, 0, 0), xaxs="i")
-roc(MBT$HC_vs_aMCIAD, MBT$MBT_IR_TIP, plot=TRUE, percent=TRUE, col="#1c61b6", lwd=2, ci = T, print.auc=TRUE)
-plot.roc(MBT$HC_vs_aMCIAD, MBT$MBT_IR_PIP, percent=TRUE, col="#008600", lwd=2, ci = T, print.auc=TRUE, add=TRUE, print.auc.y=45)
-plot.roc(MBT$HC_vs_aMCIAD, MBT$RAVLT15, percent=TRUE, col="pink", lwd=2, ci = T, print.auc=TRUE, add=TRUE, print.auc.y=40)
-plot.roc(MBT$HC_vs_aMCIAD, MBT$RAVLT30, percent=TRUE, col="red", lwd=2, ci = T, print.auc=TRUE, add=TRUE, print.auc.y=35)
-title(main="AUC: HC vs. aMCI AD", line = 2.5)
-add_legend("bottom", legend=c("MBT TIP", "MBT PIP", "RAVLT 1-5", "RAVLT Delayed Recall"), lwd=2, 
-           col=c("#1c61b6", "#008600", "pink", "red"),
-           horiz=T, bty='n', cex=0.8)
+#### Create layout matrix (1 column and 2 rows)
+layout(matrix(c(1, 2), nrow = 2, byrow = TRUE), heights = c(3, 0.2))
 
-###HC versus AD-aMCI beta-amyloid confirmed
-par(oma=c(2, 0, 0, 0), xaxs="i")
-roc(MBT$HC_vs_aMCIADamyloid, MBT$MBT_IR_TIP, plot=TRUE, percent=TRUE, col="#1c61b6", lwd=2, ci = T, print.auc=TRUE)
-plot.roc(MBT$HC_vs_aMCIADamyloid, MBT$MBT_IR_PIP, percent=TRUE, col="#008600", lwd=2, ci = T, print.auc=TRUE, add=TRUE, print.auc.y=45)
-plot.roc(MBT$HC_vs_aMCIADamyloid, MBT$RAVLT15, percent=TRUE, col="pink", lwd=2, ci = T, print.auc=TRUE, add=TRUE, print.auc.y=40)
-plot.roc(MBT$HC_vs_aMCIADamyloid, MBT$RAVLT30, percent=TRUE, col="red", lwd=2, ci = T, print.auc=TRUE, add=TRUE, print.auc.y=35)
-title(main="AUC: HC vs. aMCI AD Aß conf.", line = 2.5)
-add_legend("bottom", legend=c("MBT TIP", "MBT PIP", "RAVLT 1-5", "RAVLT Delayed Recall"), lwd=2, 
-           col=c("#1c61b6", "#008600", "pink", "red"),
-           horiz=T, bty='n', cex=0.8)
+#### Start plotting in the first cell
+par(mar = c(4, 4, 2, 2))
+
+#### Plot the first ROC curve
+rocobj13 <- roc(MBT$HC_vs_aMCIAD, MBT$MBT_IR_TIP)
+plot(rocobj13, main="AUC: HC vs. AD-aMCI", percent=TRUE, col="#1c61b6")
+text(x=0.5, y=0.4, labels=paste0("AUC: ", round(AUCCI_HCAD_MBT_TIP[[2]], 3), "; ", 
+                                 round(AUCCI_HCAD_MBT_TIP[[1]], 3), "-", round(AUCCI_HCAD_MBT_TIP[[3]], 3)), 
+     col="#1c61b6", cex=0.9, adj=0)
+#### Add second ROC curve
+rocobj14 <- roc(MBT$HC_vs_aMCIAD, MBT$MBT_IR_PIP)
+lines(rocobj14, percent=TRUE, col="#008600")
+text(x=0.5, y=0.35, labels=paste0("AUC: ", round(AUCCI_HCAD_MBT_PIP[[2]], 3), "; ", 
+                                  round(AUCCI_HCAD_MBT_PIP[[1]], 3), "-", round(AUCCI_HCAD_MBT_PIP[[3]], 3)), 
+     col="#008600", cex=0.9, adj=0)
+#### Add third ROC curve
+rocobj15 <- roc(MBT$HC_vs_aMCIAD, MBT$RAVLT15)
+lines(rocobj15, percent=TRUE, col="pink")
+text(x=0.5, y=0.30, labels=paste0("AUC: ", round(AUCCI_HCAD_RAVLT15[[2]], 3), "; ", 
+                                  round(AUCCI_HCAD_RAVLT15[[1]], 3), "-", round(AUCCI_HCAD_RAVLT15[[3]], 3)), 
+     col="pink", cex=0.9, adj=0)
+#### Add fourth ROC curve
+rocobj16 <- roc(MBT$HC_vs_aMCIAD, MBT$RAVLT30)
+lines(rocobj16, percent=TRUE, col="red")
+text(x=0.5, y=0.25, labels=paste0("AUC: ", round(AUCCI_HCAD_RAVLT30[[2]], 3), "; ", 
+                                  round(AUCCI_HCAD_RAVLT30[[1]], 3), "-", round(AUCCI_HCAD_RAVLT30[[3]], 3)), 
+     col="red", cex=0.9, adj=0)
+
+#### Move to the second cell for legend
+par(mar = c(0, 0, 0, 0))
+plot(1, type = "n", axes = FALSE, xlab = "", ylab = "", main = "")
+legend("bottom", inset=c(0, 0.4), legend = c("MBT TIP", "MBT PIP", "RAVLT 1-5", "RAVLT Delayed Recall"),
+       col = c("#1c61b6", "#008600", "pink", "red"), lwd = 2, cex = 0.55, bty = "n", xpd = TRUE, horiz = TRUE)
+
+
+
 
 ###HC versus PD-MCI
-par(oma=c(2, 0, 0, 0), xaxs="i")
-roc(MBT$HC_vs_PDMCI, MBT$MBT_IR_TIP, plot=TRUE, percent=TRUE, col="#1c61b6", lwd=2, ci = T, print.auc=TRUE)
-plot.roc(MBT$HC_vs_PDMCI, MBT$MBT_IR_PIP, percent=TRUE, col="#008600", lwd=2, ci = T, print.auc=TRUE, add=TRUE, print.auc.y=45)
-plot.roc(MBT$HC_vs_PDMCI, MBT$RAVLT15, percent=TRUE, col="pink", lwd=2, ci = T, print.auc=TRUE, add=TRUE, print.auc.y=40)
-plot.roc(MBT$HC_vs_PDMCI, MBT$RAVLT30, percent=TRUE, col="red", lwd=2, ci = T, print.auc=TRUE, add=TRUE, print.auc.y=35)
-title(main="AUC: HC vs. PD-MCI", line = 2.5)
-add_legend("bottom", legend=c("MBT TIP", "MBT PIP", "RAVLT 1-5", "RAVLT Delayed Recall"), lwd=2, 
-           col=c("#1c61b6", "#008600", "pink", "red"),
-           horiz=T, bty='n', cex=0.8)
+#### Create layout matrix (1 column and 2 rows)
+layout(matrix(c(1, 2), nrow = 2, byrow = TRUE), heights = c(3, 0.2))
+
+#### Start plotting in the first cell
+par(mar = c(4, 4, 2, 2))
+
+#### Plot the first ROC curve
+rocobj13 <- roc(MBT$HC_vs_PDMCI, MBT$MBT_IR_TIP)
+plot(rocobj13, main="AUC: HC vs. PD-MCI", percent=TRUE, col="#1c61b6")
+text(x=0.5, y=0.4, labels=paste0("AUC: ", round(AUCCI_HCPD_MBT_TIP[[2]], 3), "; ", 
+                                 round(AUCCI_HCPD_MBT_TIP[[1]], 3), "-", round(AUCCI_HCPD_MBT_TIP[[3]], 3)), 
+     col="#1c61b6", cex=0.9, adj=0)
+#### Add second ROC curve
+rocobj14 <- roc(MBT$HC_vs_PDMCI, MBT$MBT_IR_PIP)
+lines(rocobj14, percent=TRUE, col="#008600")
+text(x=0.5, y=0.35, labels=paste0("AUC: ", round(AUCCI_HCPD_MBT_PIP[[2]], 3), "; ", 
+                                  round(AUCCI_HCPD_MBT_PIP[[1]], 3), "-", round(AUCCI_HCPD_MBT_PIP[[3]], 3)), 
+     col="#008600", cex=0.9, adj=0)
+#### Add third ROC curve
+rocobj15 <- roc(MBT$HC_vs_PDMCI, MBT$RAVLT15)
+lines(rocobj15, percent=TRUE, col="pink")
+text(x=0.5, y=0.30, labels=paste0("AUC: ", round(AUCCI_HCPD_RAVLT15[[2]], 3), "; ", 
+                                  round(AUCCI_HCPD_RAVLT15[[1]], 3), "-", round(AUCCI_HCPD_RAVLT15[[3]], 3)), 
+     col="pink", cex=0.9, adj=0)
+#### Add fourth ROC curve
+rocobj16 <- roc(MBT$HC_vs_PDMCI, MBT$RAVLT30)
+lines(rocobj16, percent=TRUE, col="red")
+text(x=0.5, y=0.25, labels=paste0("AUC: ", round(AUCCI_HCPD_RAVLT30[[2]], 3), "; ", 
+                                  round(AUCCI_HCPD_RAVLT30[[1]], 3), "-", round(AUCCI_HCPD_RAVLT30[[3]], 3)), 
+     col="red", cex=0.9, adj=0)
+
+#### Move to the second cell for legend
+par(mar = c(0, 0, 0, 0))
+plot(1, type = "n", axes = FALSE, xlab = "", ylab = "", main = "")
+legend("bottom", inset=c(0, 0.4), legend = c("MBT TIP", "MBT PIP", "RAVLT 1-5", "RAVLT Delayed Recall"),
+       col = c("#1c61b6", "#008600", "pink", "red"), lwd = 2, cex = 0.55, bty = "n", xpd = TRUE, horiz = TRUE)
+
 
 ###PD-NC versus PD-MCI
-par(oma=c(2, 0, 0, 0), xaxs="i")
-roc(MBT$PDNC_vs_PDMCI, MBT$MBT_IR_TIP, plot=TRUE, percent=TRUE, col="#1c61b6", lwd=2, ci = T, print.auc=TRUE)
-plot.roc(MBT$PDNC_vs_PDMCI, MBT$MBT_IR_PIP, percent=TRUE, col="#008600", lwd=2, ci = T, print.auc=TRUE, add=TRUE, print.auc.y=45)
-plot.roc(MBT$PDNC_vs_PDMCI, MBT$RAVLT15, percent=TRUE, col="pink", lwd=2, ci = T, print.auc=TRUE, add=TRUE, print.auc.y=40)
-plot.roc(MBT$PDNC_vs_PDMCI, MBT$RAVLT30, percent=TRUE, col="red", lwd=2, ci = T, print.auc=TRUE, add=TRUE, print.auc.y=35)
-title(main="AUC: PD-NC vs. PD-MCI", line = 2.5)
-add_legend("bottom", legend=c("MBT TIP", "MBT PIP", "RAVLT 1-5", "RAVLT Delayed Recall"), lwd=2, 
-           col=c("#1c61b6", "#008600", "pink", "red"),
-           horiz=T, bty='n', cex=0.8)
+#### Create layout matrix (1 column and 2 rows)
+layout(matrix(c(1, 2), nrow = 2, byrow = TRUE), heights = c(3, 0.2))
+
+#### Start plotting in the first cell
+par(mar = c(4, 4, 2, 2))
+
+#### Plot the first ROC curve
+rocobj13 <- roc(MBT$PDNC_vs_PDMCI, MBT$MBT_IR_TIP)
+plot(rocobj13, main="AUC: PD-NC vs. PD-MCI", percent=TRUE, col="#1c61b6")
+text(x=0.5, y=0.4, labels=paste0("AUC: ", round(AUCCI_PDncPDmci_MBT_TIP[[2]], 3), "; ", 
+                                 round(AUCCI_PDncPDmci_MBT_TIP[[1]], 3), "-", round(AUCCI_PDncPDmci_MBT_TIP[[3]], 3)), 
+     col="#1c61b6", cex=0.9, adj=0)
+#### Add second ROC curve
+rocobj14 <- roc(MBT$PDNC_vs_PDMCI, MBT$MBT_IR_PIP)
+lines(rocobj14, percent=TRUE, col="#008600")
+text(x=0.5, y=0.35, labels=paste0("AUC: ", round(AUCCI_PDncPDmci_MBT_PIP[[2]], 3), "; ", 
+                                  round(AUCCI_PDncPDmci_MBT_PIP[[1]], 3), "-", round(AUCCI_PDncPDmci_MBT_PIP[[3]], 3)), 
+     col="#008600", cex=0.9, adj=0)
+#### Add third ROC curve
+rocobj15 <- roc(MBT$PDNC_vs_PDMCI, MBT$RAVLT15)
+lines(rocobj15, percent=TRUE, col="pink")
+text(x=0.5, y=0.30, labels=paste0("AUC: ", round(AUCCI_PDncPDmci_RAVLT15[[2]], 3), "; ", 
+                                  round(AUCCI_PDncPDmci_RAVLT15[[1]], 3), "-", round(AUCCI_PDncPDmci_RAVLT15[[3]], 3)), 
+     col="pink", cex=0.9, adj=0)
+#### Add fourth ROC curve
+rocobj16 <- roc(MBT$PDNC_vs_PDMCI, MBT$RAVLT30)
+lines(rocobj16, percent=TRUE, col="red")
+text(x=0.5, y=0.25, labels=paste0("AUC: ", round(AUCCI_PDncPDmci_RAVLT30[[2]], 3), "; ", 
+                                  round(AUCCI_PDncPDmci_RAVLT30[[1]], 3), "-", round(AUCCI_PDncPDmci_RAVLT30[[3]], 3)), 
+     col="red", cex=0.9, adj=0)
+
+#### Move to the second cell for legend
+par(mar = c(0, 0, 0, 0))
+plot(1, type = "n", axes = FALSE, xlab = "", ylab = "", main = "")
+legend("bottom", inset=c(0, 0.4), legend = c("MBT TIP", "MBT PIP", "RAVLT 1-5", "RAVLT Delayed Recall"),
+       col = c("#1c61b6", "#008600", "pink", "red"), lwd = 2, cex = 0.55, bty = "n", xpd = TRUE, horiz = TRUE)
 
 
 #violinplots
@@ -1058,3 +1147,6 @@ describe(HC_Cases_MBTTIP$Age)
 
 describe(HC_Cases_MBTPIP$MBT_IR_PIP)
 describe(HC_Cases_MBTPIP$Age)
+
+sessionInfo()
+
