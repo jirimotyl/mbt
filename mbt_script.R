@@ -1,6 +1,7 @@
-#Herman Buschke Memory Binding Test - Czech Validation
+#Differential Cued Recall Memory Impairment in Mild Cognitive Impairment due to Alzheimer’s Disease versus Parkinson’s Disease 
+#(Herman Buschke Memory Binding Test - Czech Validation)
 ##
-##Authors: Ondrej Bezdicek, Jiri Motyl, Tomas Nikolai, Hana Horakova, Adela Fendrych Mazancova, Martin Vyhnalek, Jakub Hort, Robert Jech, Evzen Ruzicka
+##Authors: Ondrej Bezdicek, Jiri Motyl, Tomas Nikolai, Adela Fendrych Mazancova, Jakub Hort, Robert Jech, Martin Vyhnalek, Hana Horakova
 ##Analysis by: Jiri Motyl, jiri.motyl@vfn.cz
 ##Corresponding Author: Ondrej Bezdicek, ondrej.bezdicek@vfn.cz
 ##Date of analysis: 2024-04-23
