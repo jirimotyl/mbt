@@ -6,12 +6,13 @@
 ##Corresponding Author: Ondrej Bezdicek, ondrej.bezdicek@vfn.cz
 ##Date of analysis: 2024-04-23
 ##Date of analysis after the 1st revision: 2024-11-03
+##Date of analysis after the 2nd revision: 2025-06-28
 
-##R version R version 4.3.2 (2023-10-31 ucrt)
+##R version R version 4.5.1 (2025-06-13 ucrt)
 ###Platform: x86_64-w64-mingw32/x64 (64-bit)
-###Running under: Windows 10 x64 (build 19045)
+###Running under: Windows 11 x64 (build 26100)
 ###attached base packages: stats; graphics; grDevices utils; datasets; methods; base
-###other attached packages: jmv_2.4.11; papaja_0.1.2; tinylabels_0.2.4; janitor_2.2.0; gt_0.10.1; pROC_1.18.5; WRS2_1.1-6; PMCMRplus_1.9.10;  rcompanion_2.4.35; lubridate_1.9.3;  forcats_1.0.0; stringr_1.5.1; dplyr_1.1.4; purrr_1.0.2; readr_2.1.5; tidyr_1.3.1; tibble_3.2.1; ggplot2_3.5.0; tidyverse_2.0.0;  psych_2.4.3    
+###other attached packages: optmatch_0.10.8,  MatchIt_4.7.2, jmv_2.74.0; papaja_0.1.3; tinylabels_0.2.5; janitor_2.2.1; gt_1.0.0; pROC_1.18.5; WRS2_1.1-7; PMCMRplus_1.9.12;  rcompanion_2.5.0; lubridate_1.9.4;  forcats_1.0.0; stringr_1.5.1; dplyr_1.1.4; purrr_1.0.4; readr_2.1.5; tidyr_1.3.1; tibble_3.3.0; ggplot2_3.5.2; tidyverse_2.0.0;  psych_2.5.6    
 ###locale: LC_COLLATE=Czech_Czechia.utf8; LC_CTYPE=Czech_Czechia.utf8; LC_MONETARY=Czech_Czechia.utf8 LC_NUMERIC=C; LC_TIME=Czech_Czechia.utf8    
 
 ###Description of key variables
@@ -58,7 +59,7 @@ install_and_load <- function(package_list) {
 
 ## List of necessary packages
 packages <- c("psych", "tidyverse", "rcompanion", "PMCMRplus", "WRS2", "pROC", 
-              "gt", "janitor", "papaja", "jmv")
+              "gt", "janitor", "papaja", "jmv", "MatchIt", "optmatch")
 
 ## Install and load packages
 install_and_load(packages)
@@ -1131,6 +1132,79 @@ MBT_robust_ancova_HCADamyl_age <- WRS2::ancova(MBT_IR_TIP ~ HC_vs_aMCIADamyloid 
 MBT_robust_ancova_HCADamyl_age
 
 
+#Matching HC by Age to aMCI-AD
+subset_data <- MBT[MBT$Disease_NO %in% c("HC", "AD-aMCI"), ]
+subset_data$treat <- ifelse(subset_data$Disease_NO == "AD-aMCI", 1, 0)
+
+## Perform optimal matching on age with Euclidean distance
+match_result <- matchit(treat ~ Age, data = subset_data, method = "optimal", ratio = 1, distance = "Euclidean")
+
+## Get the matched data
+matched_data <- match.data(match_result)
+
+## Identify matched HC participants
+matched_hc_in_matched_data <- matched_data[matched_data$treat == 0, ]
+matched_hc_row_names <- rownames(matched_hc_in_matched_data)
+matched_hc_indices_in_MBT <- match(matched_hc_row_names, rownames(MBT))
+
+## Identify all HC participants in MBT
+hc_indices_in_MBT <- which(MBT$Disease_NO == "HC")
+
+## Identify unmatched HC participants
+unmatched_hc_indices_in_MBT <- setdiff(hc_indices_in_MBT, matched_hc_indices_in_MBT)
+
+## Create the new subgroup variable
+MBT$matched_subgroup <- NA  # Initialize
+
+MBT$matched_subgroup[unmatched_hc_indices_in_MBT] <- 0
+MBT$matched_subgroup[matched_hc_indices_in_MBT] <- 1
+MBT$matched_subgroup[MBT$Disease_NO == "PD-NC"] <- 2
+MBT$matched_subgroup[MBT$Disease_NO == "PD-MCI"] <- 3
+MBT$matched_subgroup[MBT$Disease_NO == "AD-aMCI"] <- 4
+
+## Verify the new variable and check mean ages
+cat("Balance summary:\n")
+summary(match_result)  # This will show balance statistics, including mean age differences
+
+## Compute and display mean ages in the matched data
+mean_age_ad_amci <- mean(matched_data$Age[matched_data$treat == 1])
+mean_age_hc <- mean(matched_data$Age[matched_data$treat == 0])
+cat("\nMean age AD-aMCI:", mean_age_ad_amci, "\n")
+cat("Mean age matched HC:", mean_age_hc, "\n")
+cat("Difference in mean ages:", abs(mean_age_ad_amci - mean_age_hc), "\n")
+
+## Verify the new variable
+cat("\nTable of new_subgroup by Disease_NO:\n")
+table(MBT$matched_subgroup, MBT$Disease_NO)
+
+##Prepare variables in the matched sample for ROC
+### Initialize the new variable
+MBT$HC_vs_aMCIAD_matched <- NA
+
+### Assign values based on the matched_subgroup variable
+### 0 for matched HC (where matched_subgroup == 1)
+MBT$HC_vs_aMCIAD_matched[MBT$matched_subgroup == 1] <- 1
+
+### 1 for AD-aMCI (where matched_subgroup == 4)
+MBT$HC_vs_aMCIAD_matched[MBT$Disease_NO == "AD-aMCI"] <- 4
+
+### Verify the new variable
+table(MBT$HC_vs_aMCIAD_matched, MBT$Disease_NO)
+
+##Prepare variables in the matched sample for ROC - aMCI-AD ABeta confirmed
+### Initialize the new variable
+MBT$HC_vs_aMCIADamyloid_matched <- NA
+
+### Assign 0 to matched HC (where matched_subgroup == 1)
+MBT$HC_vs_aMCIADamyloid_matched[MBT$matched_subgroup == 1] <- 1
+
+### Assign 1 where MBT$aMCI_AD_amyloid is 1
+MBT$HC_vs_aMCIADamyloid_matched[MBT$aMCI_AD_amyloid == 1] <- 5
+
+### Verify the new variable
+table(MBT$HC_vs_aMCIADamyloid_matched, MBT$Disease_NO)
+
+
 #ROC
 windows(width=10, height=8)
 ROC_MBT_PDAD <- roc(formula=MBT$PDMCI_vs_aMCIAD ~MBT$MBT_IR_CR_L1L2+MBT$MBT_IR_TIP+MBT$MBT_IR_PIP+MBT$RAVLT30+MBT$RAVLT15, levels = c(3,4), na.rm = TRUE, auc = TRUE, ci = TRUE, plot= TRUE)
@@ -1139,6 +1213,9 @@ ROC_MBT_HCAD <- roc(formula=MBT$HC_vs_aMCIAD ~MBT$MBT_IR_CR_L1L2+MBT$MBT_IR_TIP+
 ROC_MBT_HCADamyl <- roc(formula=MBT$HC_vs_aMCIADamyloid ~MBT$MBT_IR_CR_L1L2+MBT$MBT_IR_TIP+MBT$MBT_IR_PIP+MBT$RAVLT30+MBT$RAVLT15, levels = c(1,5), na.rm = TRUE, auc = TRUE, ci = TRUE, plot= TRUE)
 ROC_MBT_HCPD <- roc(formula=MBT$HC_vs_PDMCI ~MBT$MBT_IR_CR_L1L2+MBT$MBT_IR_TIP+MBT$MBT_IR_PIP+MBT$RAVLT30+MBT$RAVLT15, levels = c(1,3), na.rm = TRUE, auc = TRUE, ci = TRUE, plot= TRUE)
 ROC_MBT_PDNC_vs_PDMCI <- roc(formula=MBT$PDNC_vs_PDMCI~MBT$MBT_IR_CR_L1L2+MBT$MBT_IR_TIP+MBT$MBT_IR_PIP+MBT$RAVLT30+MBT$RAVLT15, levels = c(2,3), na.rm = TRUE, auc = TRUE, ci = TRUE, plot= TRUE)
+ROC_MBT_HCmatchedAD <- roc(formula=MBT$HC_vs_aMCIAD_matched ~MBT$MBT_IR_CR_L1L2+MBT$MBT_IR_TIP+MBT$RAVLT30+MBT$RAVLT15, levels = c(1,4), na.rm = TRUE, auc = TRUE, ci = TRUE, plot= TRUE)
+ROC_MBT_HCmatchedADamyl <- roc(formula=MBT$HC_vs_aMCIADamyloid_matched ~MBT$MBT_IR_CR_L1L2+MBT$MBT_IR_TIP++MBT$RAVLT30+MBT$RAVLT15, levels = c(1,5), na.rm = TRUE, auc = TRUE, ci = TRUE, plot= TRUE)
+
 
 ##AUC CI
 ###HC versus AD-aMCI all
@@ -1169,6 +1246,30 @@ AUCCI_HCADamyl_RAVLT15
 ROC_MBT_HCADamyl$'MBT$RAVLT30'$auc
 AUCCI_HCADamyl_RAVLT30
 
+###HC matched versus AD-aMCI all
+AUCCI_HCmatchAD_MBT_TIP <- ci.auc(ROC_MBT_HCmatchedAD$'MBT$MBT_IR_TIP'$auc, conf.level=0.95, method=c("delong"))
+AUCCI_HCmatchAD_RAVLT15 <- ci.auc(ROC_MBT_HCmatchedAD$'MBT$RAVLT15'$auc, conf.level=0.95, method=c("delong"))
+AUCCI_HCmatchAD_RAVLT30 <- ci.auc(ROC_MBT_HCmatchedAD$'MBT$RAVLT30'$auc, conf.level=0.95, method=c("delong"))
+
+ROC_MBT_HCmatchedAD$'MBT$MBT_IR_TIP'$auc
+AUCCI_HCmatchAD_MBT_TIP
+ROC_MBT_HCmatchedAD$'MBT$RAVLT15'$auc
+AUCCI_HCmatchAD_RAVLT15
+ROC_MBT_HCmatchedAD$'MBT$RAVLT30'$auc
+AUCCI_HCmatchAD_RAVLT30
+
+
+###HC matched versus AD-aMCI Aβ conf. confirmed 
+AUCCI_HCmatchADamyl_MBT_TIP <- ci.auc(ROC_MBT_HCmatchedADamyl$'MBT$MBT_IR_TIP'$auc, conf.level=0.95, method=c("delong"))
+AUCCI_HCmatchADamyl_RAVLT15 <- ci.auc(ROC_MBT_HCmatchedADamyl$'MBT$RAVLT15'$auc, conf.level=0.95, method=c("delong"))
+AUCCI_HCmatchADamyl_RAVLT30 <- ci.auc(ROC_MBT_HCmatchedADamyl$'MBT$RAVLT30'$auc, conf.level=0.95, method=c("delong"))
+
+ROC_MBT_HCmatchedADamyl$'MBT$MBT_IR_TIP'$auc
+AUCCI_HCmatchADamyl_MBT_TIP
+ROC_MBT_HCmatchedADamyl$'MBT$RAVLT15'$auc
+AUCCI_HCmatchADamyl_RAVLT15
+ROC_MBT_HCmatchedADamyl$'MBT$RAVLT30'$auc
+AUCCI_HCmatchADamyl_RAVLT30
 
 ###PD-MCI versus AD-aMCI
 AUCCI_PDAD_MBT_TIP <- ci.auc(ROC_MBT_PDAD$`MBT$MBT_IR_TIP`$auc, conf.level=0.95, method=c("delong"))
@@ -1407,6 +1508,38 @@ plot(1, type = "n", axes = FALSE, xlab = "", ylab = "", main = "")
 legend("bottom", inset=c(0, 0.4), legend = c("MBT TIP", "MBT PIP", "RAVLT 1-5", "RAVLT Delayed Recall"),
        col = c("#1c61b6", "#008600", "pink", "red"), lwd = 2, cex = 0.55, bty = "n", xpd = TRUE, horiz = TRUE)
 
+###HC matched versus AD-aMCI
+#### Create layout matrix (1 column and 2 rows)
+layout(matrix(c(1, 2), nrow = 2, byrow = TRUE), heights = c(3, 0.2))
+
+#### Start plotting in the first cell
+par(mar = c(4, 4, 2, 2))
+
+#### Plot the first ROC curve
+rocobj13 <- roc(MBT$HC_vs_aMCIAD_matched, MBT$MBT_IR_TIP)
+plot(rocobj13, main="AUC: CN matched vs. AD-aMCI", percent=TRUE, col="#1c61b6")
+text(x=0.5, y=0.4, labels=paste0("AUC: ", round(AUCCI_HCmatchAD_MBT_TIP[[2]], 3), "; ", 
+                                 round(AUCCI_HCmatchAD_MBT_TIP[[1]], 3), "-", round(AUCCI_HCmatchAD_MBT_TIP[[3]], 3)), 
+     col="#1c61b6", cex=0.9, adj=0)
+#### Add third ROC curve
+rocobj15 <- roc(MBT$HC_vs_aMCIAD_matched, MBT$RAVLT15)
+lines(rocobj15, percent=TRUE, col="pink")
+text(x=0.5, y=0.35, labels=paste0("AUC: ", round(AUCCI_HCmatchAD_RAVLT15[[2]], 3), "; ", 
+                                  round(AUCCI_HCmatchAD_RAVLT15[[1]], 3), "-", round(AUCCI_HCmatchAD_RAVLT15[[3]], 3)), 
+     col="pink", cex=0.9, adj=0)
+#### Add fourth ROC curve
+rocobj16 <- roc(MBT$HC_vs_aMCIAD_matched, MBT$RAVLT30)
+lines(rocobj16, percent=TRUE, col="red")
+text(x=0.5, y=0.3, labels=paste0("AUC: ", round(AUCCI_HCmatchAD_RAVLT30[[2]], 3), "; ", 
+                                 round(AUCCI_HCmatchAD_RAVLT30[[1]], 3), "-", round(AUCCI_HCmatchAD_RAVLT30[[3]], 3)), 
+     col="red", cex=0.9, adj=0)
+
+#### Move to the second cell for legend
+par(mar = c(0, 0, 0, 0))
+plot(1, type = "n", axes = FALSE, xlab = "", ylab = "", main = "")
+legend("bottom", inset=c(0, 0.4), legend = c("MBT TIP", "RAVLT 1-5", "RAVLT Delayed Recall"),
+       col = c("#1c61b6", "pink", "red"), lwd = 2, cex = 0.55, bty = "n", xpd = TRUE, horiz = TRUE)
+
 
 
 
@@ -1568,7 +1701,37 @@ plot(1, type = "n", axes = FALSE, xlab = "", ylab = "", main = "")
 legend("bottom", inset=c(0, 0.4), legend = c("MBT TIP", "MBT PIP", "RAVLT 1-5", "RAVLT Delayed Recall"),
        col = c("#1c61b6", "#008600", "pink", "red"), lwd = 2, cex = 0.55, bty = "n", xpd = TRUE, horiz = TRUE)
 
+###HC matched versus AD-aMCI Aβ conf.
+#### Create layout matrix (1 column and 2 rows)
+layout(matrix(c(1, 2), nrow = 2, byrow = TRUE), heights = c(3, 0.2))
 
+#### Start plotting in the first cell
+par(mar = c(4, 4, 2, 2))
+
+#### Plot the first ROC curve
+rocobj13 <- roc(MBT$HC_vs_aMCIADamyloid_matched, MBT$MBT_IR_TIP)
+plot(rocobj13, main="AUC: CN matched vs. AD-aMCI-HL", percent=TRUE, col="#1c61b6")
+text(x=0.5, y=0.4, labels=paste0("AUC: ", round(AUCCI_HCmatchADamyl_MBT_TIP[[2]], 3), "; ", 
+                                 round(AUCCI_HCmatchADamyl_MBT_TIP[[1]], 3), "-", round(AUCCI_HCmatchADamyl_MBT_TIP[[3]], 3)), 
+     col="#1c61b6", cex=0.9, adj=0)
+#### Add third ROC curve
+rocobj15 <- roc(MBT$HC_vs_aMCIADamyloid_matched, MBT$RAVLT15)
+lines(rocobj15, percent=TRUE, col="pink")
+text(x=0.5, y=0.35, labels=paste0("AUC: ", round(AUCCI_HCmatchADamyl_RAVLT15[[2]], 3), "; ", 
+                                  round(AUCCI_HCmatchADamyl_RAVLT15[[1]], 3), "-", round(AUCCI_HCmatchADamyl_RAVLT15[[3]], 3)), 
+     col="pink", cex=0.9, adj=0)
+#### Add fourth ROC curve
+rocobj16 <- roc(MBT$HC_vs_aMCIADamyloid_matched, MBT$RAVLT30)
+lines(rocobj16, percent=TRUE, col="red")
+text(x=0.5, y=0.3, labels=paste0("AUC: ", round(AUCCI_HCmatchADamyl_RAVLT30[[2]], 3), "; ", 
+                                  round(AUCCI_HCmatchADamyl_RAVLT30[[1]], 3), "-", round(AUCCI_HCmatchADamyl_RAVLT30[[3]], 3)), 
+     col="red", cex=0.9, adj=0)
+
+#### Move to the second cell for legend
+par(mar = c(0, 0, 0, 0))
+plot(1, type = "n", axes = FALSE, xlab = "", ylab = "", main = "")
+legend("bottom", inset=c(0, 0.4), legend = c("MBT TIP", "RAVLT 1-5", "RAVLT Delayed Recall"),
+       col = c("#1c61b6", "pink", "red"), lwd = 2, cex = 0.55, bty = "n", xpd = TRUE, horiz = TRUE)
 
 #violinplots
 
